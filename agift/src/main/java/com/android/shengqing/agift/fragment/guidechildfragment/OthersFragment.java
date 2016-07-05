@@ -1,20 +1,24 @@
 package com.android.shengqing.agift.fragment.guidechildfragment;
 
+import android.content.Context;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.BaseAdapter;
 import android.widget.ImageView;
+import android.widget.ListView;
+import android.widget.TextView;
 
 import com.android.shengqing.agift.R;
-import com.android.shengqing.agift.bean.GuideBean.HaiTaoBean;
+import com.android.shengqing.agift.bean.HandpickBean.HandpickBean;
 import com.android.shengqing.agift.util.URLConstants;
 import com.android.shengqing.httplibrary.IOKCallBack;
 import com.android.shengqing.httplibrary.OkHttpTool;
 import com.google.gson.Gson;
+import com.handmark.pulltorefresh.library.PullToRefreshBase;
+import com.handmark.pulltorefresh.library.PullToRefreshListView;
 import com.squareup.picasso.Picasso;
 
 import java.util.ArrayList;
@@ -25,91 +29,115 @@ import butterknife.ButterKnife;
 
 
 public class OthersFragment extends Fragment {
-    @BindView(R.id.other_content_rv)
-    RecyclerView mRecyclerView;
-    private List<HaiTaoBean.DataBean.ItemsBean> recyclerImageDatas = new ArrayList<>();
-    private RecyclerViewAdapter recyclerViewAdapter;
+    List<HandpickBean.DataBean.ItemsBean> itemBean;
+    private ListView mlistView;
+    @BindView(R.id.other_content_listview)
+    PullToRefreshListView pullToRefreshListView;
+    private int id;
+    private Context mContext;
+    private MyListAdapter adapter;
 
-    public static OthersFragment newInstance() {
+    public static OthersFragment newInstance(Bundle args) {
         OthersFragment fragment = new OthersFragment();
+        fragment.setArguments(args);
         return fragment;
     }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        mContext=getActivity();
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+    public void onAttach(Context context) {
+        super.onAttach(context);
+        Bundle bundle=getArguments();
+        id = bundle.getInt("id");
+    }
+
+    @Override
+    public View onCreateView(LayoutInflater inflater , ViewGroup container,
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_others, container, false);
         ButterKnife.bind(this,view);
-        loadRecyclerDatas();
-        setupRecyclerView();
+        mlistView=pullToRefreshListView.getRefreshableView();
+        pullToRefreshListView.setMode(PullToRefreshBase.Mode.BOTH);
+        initData();
+        initAdapter();
+        bindAdapter();
         return view;
     }
 
+    private void bindAdapter() {
+        mlistView.setAdapter(adapter);
+    }
 
-    private void loadRecyclerDatas() {
+    private void initAdapter() {
 
-        OkHttpTool.newInstance().start(URLConstants.HAITAO_URL).callback(new IOKCallBack() {
+        adapter=new MyListAdapter();
+    }
+
+    private void initData() {
+        itemBean=new ArrayList<>();
+        OkHttpTool.newInstance().start(URLConstants.URL_START + id + URLConstants.URL_END).callback(new IOKCallBack() {
             @Override
             public void success(String result) {
-                Gson gson = new Gson();
-                HaiTaoBean bean = gson.fromJson(result, HaiTaoBean.class);
-                recyclerImageDatas.addAll(bean.getData().getItems());
-                recyclerViewAdapter.notifyDataSetChanged();
+                Gson gson=new Gson();
+                HandpickBean bean=gson.fromJson(result,HandpickBean.class);
+                itemBean.addAll(bean.getData().getItems());
+                adapter.notifyDataSetChanged();
             }
         });
-    }
-    //创建ViewHolder
-    class RecyclerViewHolder extends RecyclerView.ViewHolder {
-        public ImageView imageView;
 
-        public RecyclerViewHolder(View itemView) {
-            super(itemView);
-            imageView = (ImageView) itemView;
-        }
+
     }
 
-    //创建适配器
-    class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewHolder> {
+
+
+
+    class   MyListAdapter extends BaseAdapter {
 
         @Override
-        public RecyclerViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-            ImageView imageView = new ImageView(getActivity());
-
-            int matchParent = RecyclerView.LayoutParams.MATCH_PARENT;
-            int h =400;
-            RecyclerView.LayoutParams params = new RecyclerView.LayoutParams(matchParent,h);
-
-            imageView.setLayoutParams(params);
-            imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
-            return new RecyclerViewHolder(imageView);
+        public int getCount() {
+            return itemBean.size();
         }
 
         @Override
-        public void onBindViewHolder(RecyclerViewHolder holder, int position) {
-            //holder.imageView.setImageResource(R.mipmap.ic_launcher);
-            HaiTaoBean.DataBean.ItemsBean bean = recyclerImageDatas.get(position);
-            Picasso.with(getActivity()).load(bean.getCover_image_url()).into(holder.imageView);
+        public Object getItem(int position) {
+            return itemBean.get(position);
         }
 
         @Override
-        public int getItemCount() {
-            return recyclerImageDatas == null ? 0 : recyclerImageDatas.size();
+        public long getItemId(int position) {
+            return position;
+        }
+
+        @Override
+        public View getView(int position, View convertView, ViewGroup parent) {
+            ViewHolder viewHolder;
+            if(convertView==null){
+                convertView =LayoutInflater.from(mContext).inflate(R.layout.item_view,null);
+                viewHolder=new ViewHolder();
+                viewHolder.imageView= (ImageView) convertView.findViewById(R.id.child_image);
+                viewHolder.textView1= (TextView) convertView.findViewById(R.id.child_text);
+                viewHolder.textView2= (TextView) convertView.findViewById(R.id.child_text0);
+                convertView.setTag(viewHolder);
+            }else {
+                viewHolder= (ViewHolder) convertView.getTag();
+
+            }
+            Picasso.with(getActivity()).load(itemBean.get(position).getCover_image_url())
+                    .into(viewHolder.imageView);
+            viewHolder.textView2.setText("  " + itemBean.get(position).getLikes_count());
+            viewHolder.textView1.setText(itemBean.get(position).getTitle());
+            return convertView;
         }
     }
-
-    private void setupRecyclerView() {
-        //创建布局管理器
-        LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getActivity(), LinearLayoutManager.VERTICAL, false);
-        mRecyclerView.setLayoutManager(linearLayoutManager);
-        //创建一个适配器
-        recyclerViewAdapter = new RecyclerViewAdapter();
-        mRecyclerView.setAdapter(recyclerViewAdapter);
+    class ViewHolder{
+        ImageView imageView;
+        TextView textView1;
+        TextView textView2;
 
     }
-
 }

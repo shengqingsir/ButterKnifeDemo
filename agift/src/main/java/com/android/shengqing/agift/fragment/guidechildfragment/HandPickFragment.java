@@ -14,9 +14,9 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.android.shengqing.agift.R;
-import com.android.shengqing.agift.bean.GuideBean.BannerInfo;
-import com.android.shengqing.agift.bean.GuideBean.HandpickBean;
-import com.android.shengqing.agift.bean.GuideBean.RecyclerInfo;
+import com.android.shengqing.agift.bean.HandpickBean.BannerInfo;
+import com.android.shengqing.agift.bean.HandpickBean.HandpickBean;
+import com.android.shengqing.agift.bean.HandpickBean.RecyclerInfo;
 import com.android.shengqing.agift.util.URLConstants;
 import com.android.shengqing.httplibrary.IOKCallBack;
 import com.android.shengqing.httplibrary.OkHttpTool;
@@ -51,8 +51,9 @@ public class HandPickFragment extends Fragment {
     private HeaderViewHolder headerViewHolder;
 
 
-    public static HandPickFragment newInstance() {
+    public static HandPickFragment newInstance(Bundle args) {
         HandPickFragment fragment = new HandPickFragment();
+        fragment.setArguments(args);
         return fragment;
     }
 
@@ -61,6 +62,8 @@ public class HandPickFragment extends Fragment {
         super.onCreate(savedInstanceState);
         mContext = getActivity();
     }
+
+
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,

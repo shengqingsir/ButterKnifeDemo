@@ -1,4 +1,4 @@
-package com.android.shengqing.agift.bean.GuideBean;
+package com.android.shengqing.agift.bean.HandpickBean;
 
 import java.util.List;
 
