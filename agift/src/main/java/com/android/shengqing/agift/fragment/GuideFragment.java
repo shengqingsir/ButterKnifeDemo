@@ -1,16 +1,16 @@
 package com.android.shengqing.agift.fragment;
 
 import android.os.Bundle;
+import android.support.annotation.Nullable;
 import android.support.design.widget.TabLayout;
 import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentManager;
-import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
 import com.android.shengqing.agift.R;
+import com.android.shengqing.agift.adapter.MyViewPagerAdapter;
 import com.android.shengqing.agift.bean.GuideClassifyBean;
 import com.android.shengqing.agift.fragment.guidechildfragment.HandPickFragment;
 import com.android.shengqing.agift.fragment.guidechildfragment.OthersFragment;
@@ -27,91 +27,81 @@ import butterknife.ButterKnife;
 
 
 public class GuideFragment extends Fragment {
+    private List<String> mTitleData = new ArrayList<>();
+    private List<Fragment> fragmentList = new ArrayList<>();
+    List<GuideClassifyBean.DataBean.ChannelsBean> mList;
     @BindView(R.id.guide_index_tl)
     TabLayout mTabLayout;
     @BindView(R.id.guide_content_vp)
     ViewPager mViewPager;
+    private MyViewPagerAdapter adapter;
 
-    private List<Fragment> fragments = new ArrayList<>();
-    private List<String> mTitleList = new ArrayList<>();
-    private MyViewPagerAdapter myViewPagerAdapter;
-
-    public static GuideFragment newInstance() {
+    public static GuideFragment newInstance(Bundle args) {
         GuideFragment fragment = new GuideFragment();
+        fragment.setArguments(args);
         return fragment;
     }
 
+    @Nullable
     @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-
-    }
-
-    @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.fragment_guide, container, false);
+    public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        View view = inflater.inflate(R.layout.fragment_guide, null);
         ButterKnife.bind(this, view);
-        setupFragmentData();
+        initData();
         return view;
     }
 
-    private void setupFragmentData() {
-        //1、准备数据源
-        setupTitleData();
-
-        //2、创建适配器
-        myViewPagerAdapter = new MyViewPagerAdapter(getFragmentManager());
-        //3、关联适配器
-        mViewPager.setAdapter(myViewPagerAdapter);
-
-        //TabLayout与ViewPager关联起来
-        mTabLayout.setupWithViewPager(mViewPager);
+    private void bindAdapter() {
+        mViewPager.setAdapter(adapter);
     }
 
-    private void setupTitleData() {
+    private void initAdapter() {
+        adapter = new MyViewPagerAdapter(getChildFragmentManager(),fragmentList, mTitleData);
+    }
+
+    private void initData() {
+        mList = new ArrayList<>();
         OkHttpTool.newInstance().start(URLConstants.URL_GUIDE_CLASSIFY).callback(new IOKCallBack() {
             @Override
             public void success(String result) {
                 Gson gson = new Gson();
-                GuideClassifyBean bean =
-                        gson.fromJson(result, GuideClassifyBean.class);
-                for (GuideClassifyBean.DataBean.ChannelsBean c : bean.getData().getChannels()) {
-                    mTitleList.add(c.getName());
-                    myViewPagerAdapter.notifyDataSetChanged();
+                GuideClassifyBean bean = gson.fromJson(result, GuideClassifyBean.class);
+                mList.addAll(bean.getData().getChannels());
+                for (int i = 0; i < mList.size(); i++) {
+                    String title = mList.get(i).getName();
+                    mTitleData.add(title);
                 }
-
-
+                setupTitleData();
+                setupFragment();
+                initAdapter();
+                bindAdapter();
+                mTabLayout.setupWithViewPager(mViewPager);
             }
         });
-
     }
 
-    class MyViewPagerAdapter extends FragmentPagerAdapter {
-        public MyViewPagerAdapter(FragmentManager fm) {
-            super(fm);
-        }
-
-        @Override
-        public Fragment getItem(int position) {
-            if (position==0){
-                fragments.add(HandPickFragment.newInstance());
-            }else {
-                fragments.add(OthersFragment.newInstance());
-            }
-            return fragments.get(position);
-        }
-
-        @Override
-        public int getCount() {
-            return mTitleList == null ? 0 : mTitleList.size();
-        }
-
-        @Override
-        public CharSequence getPageTitle(int position) {
-            return mTitleList.get(position);
+    private void setupFragment() {
+        HandPickFragment fragment1 = HandPickFragment.newInstance(null);
+        fragmentList.add(fragment1);
+        //      从第二个位置开始
+        for (int i = 1; i < mTitleData.size(); i++) {
+            Bundle bundle = new Bundle();
+            bundle.putInt("id", mList.get(i).getId());
+            OthersFragment fragment = OthersFragment.newInstance(bundle);
+            fragmentList.add(fragment);
         }
     }
 
+    @Override
+    public void onActivityCreated(@Nullable Bundle savedInstanceState) {
+        super.onActivityCreated(savedInstanceState);
+    }
 
+    private void setupTitleData() {
+        for (int i = 0; i < mTitleData.size(); i++) {
+            //创建Tab:mTabLayout.newTab()
+            //设置Tab内容:tab.setText(内容);
+            mTabLayout.addTab(mTabLayout.newTab().setText(mTitleData.get(i)));
+        }
+    }
 }
